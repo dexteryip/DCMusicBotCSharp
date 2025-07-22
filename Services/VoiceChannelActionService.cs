@@ -163,17 +163,24 @@ namespace DCMusicBot.Services
             VoiceConnection connection = currentConnections[voiceChannelId];
 
             SongInstruction song = new SongInstruction(requestMessage);
-            song.LoadSong(url);
-            if (song.IsValidUrl)
+            try
             {
-                logger.LogInformation($"song id: [{song.YoutubeVideo.Id}], song title: [{song.YoutubeVideo.Title}]");
-                connection.songs.Enqueue(song);
-                connection.StartPlaying();
-            }
-            else
-            {
+                song.LoadSong(url);
+                if (song.IsValidUrl)
+                {
+                    logger.LogInformation($"song id: [{song.YoutubeVideo.Id}], song title: [{song.YoutubeVideo.Title}]");
+                    connection.songs.Enqueue(song);
+                    connection.StartPlaying();
+                }
+                else
+                {
 
-                logger.LogInformation("[EnqueuSongAsync] invalid url: " + url);
+                    logger.LogInformation("[EnqueuSongAsync] invalid url: " + url);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "[EnqueuSongAsync] exception: " + url);
             }
         }
     }

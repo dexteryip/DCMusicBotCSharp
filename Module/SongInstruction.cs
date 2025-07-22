@@ -14,7 +14,6 @@ namespace DCMusicBot.Module
         public async void LoadSong(string url)
         {
             this.url = url;
-            IsValidUrl = true;
 
             var youtube = new YoutubeClient();
 
