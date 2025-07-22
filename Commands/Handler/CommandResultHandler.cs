@@ -4,7 +4,7 @@ using NetCord.Hosting.Services.Commands;
 using NetCord.Services;
 using NetCord.Services.Commands;
 
-namespace DCMusicBot.Commands
+namespace DCMusicBot.Commands.Handler
 {
     public class MyCommandResultHandler<TContext>(MessageFlags? messageFlags = null) : ICommandResultHandler<TContext>
         where TContext : ICommandContext

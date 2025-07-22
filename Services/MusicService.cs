@@ -1,11 +1,12 @@
 ﻿using DCMusicBot.Module;
+using NetCord.Gateway.Voice;
 using NetCord.Rest;
 using NetCord.Services.Commands;
 using System;
 
 namespace DCMusicBot.Services
 {
-    public class MusicService(ChatroomActionService chatroomActionService)
+    public class MusicService(VoiceChannelActionService voiceChannelActionService)
     {
         public async Task<BotActionResult> JoinChat(CommandContext context)
         {
@@ -14,7 +15,11 @@ namespace DCMusicBot.Services
             {
                 return new BotActionResult(false, "未入Chat join mud9");
             }
-            await chatroomActionService.JoinChatAsync(context, voiceState.ChannelId.GetValueOrDefault());
+            ulong voiceChannelId = voiceState.ChannelId.GetValueOrDefault();
+
+            if (voiceChannelActionService.BotInChannel(voiceChannelId)) return new BotActionResult();
+
+            await voiceChannelActionService.JoinChatAsync(context.Guild!, context.Client, voiceChannelId);
 
             return new BotActionResult();
         }
@@ -25,13 +30,25 @@ namespace DCMusicBot.Services
                 return new BotActionResult(false, "?_? 咩Link");
             }
             string url = args[0];
+
+            if (!(url.StartsWith("https://www.youtube.com") || url.StartsWith("https://youtube.com") || url.StartsWith("https://youtu.be")))
+            {
+                return new BotActionResult(false, "youtube link plz");
+            }
+
             // Get the user voice state
             if (!context.Guild!.VoiceStates.TryGetValue(context.User.Id, out var voiceState))
             {
                 return new BotActionResult(false, "未入Chat play mud9");
             }
 
-            await chatroomActionService.PlayAsync(context, voiceState.ChannelId.GetValueOrDefault(), url);
+            ulong voiceChannelId = voiceState.ChannelId.GetValueOrDefault();
+            if (!voiceChannelActionService.BotInChannel(voiceChannelId))
+            {
+                await voiceChannelActionService.JoinChatAsync(context.Guild!, context.Client, voiceChannelId);
+            }
+
+            await voiceChannelActionService.EnqueuSongAsync(context.Message, voiceChannelId, url);
 
             return new BotActionResult();
         }

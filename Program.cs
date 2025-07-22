@@ -1,14 +1,10 @@
-using DCMusicBot.Commands;
+using DCMusicBot.Commands.Handler;
 using DCMusicBot.Services;
-using Microsoft.Extensions.Hosting;
-using NetCord;
 using NetCord.Gateway;
 using NetCord.Hosting.Gateway;
 using NetCord.Hosting.Services;
 using NetCord.Hosting.Services.ApplicationCommands;
 using NetCord.Hosting.Services.Commands;
-using NetCord.Rest;
-using NetCord.Services.ApplicationCommands;
 using NetCord.Services.Commands;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddScoped<BasicService>()
     .AddScoped<MusicService>()
-    .AddScoped<ChatroomActionService>();
+    .AddScoped<VoiceChannelActionService>();
 
 builder.Services
     .AddDiscordGateway(options =>
