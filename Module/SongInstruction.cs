@@ -11,7 +11,7 @@ namespace DCMusicBot.Module
         public Video? YoutubeVideo { get; private set; }
         public Message RequestMessage { get => requestMessage; }
         private string url;
-        public async void LoadSong(string url)
+        public async Task LoadSong(string url)
         {
             this.url = url;
 

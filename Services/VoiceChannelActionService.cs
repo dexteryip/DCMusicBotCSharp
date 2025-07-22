@@ -167,7 +167,7 @@ namespace DCMusicBot.Services
 
                 SongInstruction song = new SongInstruction(requestMessage);
 
-                song.LoadSong(url);
+                await song.LoadSong(url);
                 if (song.IsValidUrl)
                 {
                     logger.LogInformation($"song id: [{song.YoutubeVideo.Id}], song title: [{song.YoutubeVideo.Title}]");
