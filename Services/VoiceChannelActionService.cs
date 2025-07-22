@@ -8,11 +8,12 @@ using YoutubeExplode.Videos;
 using DCMusicBot.Module;
 using NetCord.Rest;
 using System.Threading;
+using Microsoft.Extensions.Logging;
 
 namespace DCMusicBot.Services
 {
     // handle concurrent actions
-    public class VoiceChannelActionService(IWebHostEnvironment env)
+    public class VoiceChannelActionService(IWebHostEnvironment env, ILogger<VoiceChannelActionService> logger)
     {
         private class VoiceConnection(ulong channel)
         {
@@ -98,7 +99,8 @@ namespace DCMusicBot.Services
                     TimeSpan waitTotal = duration ?? TimeSpan.Zero;
                     if (waitTotal != TimeSpan.Zero) waitTotal += new TimeSpan(0, 0, 5);
                     bool isSkipped = skipTokenSource.Token.WaitHandle.WaitOne(waitTotal);
-                    if (isSkipped) {
+                    if (isSkipped)
+                    {
                         // stop song
                     }
 
@@ -151,11 +153,12 @@ namespace DCMusicBot.Services
 
         public async Task EnqueuSongAsync(Message requestMessage, ulong voiceChannelId, string url)
         {
+            logger.LogInformation($"[EnqueuSongAsync] channel:{voiceChannelId} url: {url}");
             if (!BotInChannel(voiceChannelId))
             {
                 throw new Exception("Bot not in channel");
             }
-            //if (env.IsDevelopment()) throw new Exception("no play music in dev!");
+            if (env.IsDevelopment()) throw new Exception("no play music in dev!");
 
             VoiceConnection connection = currentConnections[voiceChannelId];
 
@@ -163,8 +166,14 @@ namespace DCMusicBot.Services
             song.LoadSong(url);
             if (song.IsValidUrl)
             {
+                logger.LogInformation($"song id: [{song.YoutubeVideo.Id}], song title: [{song.YoutubeVideo.Title}]");
                 connection.songs.Enqueue(song);
                 connection.StartPlaying();
+            }
+            else
+            {
+
+                logger.LogInformation("[EnqueuSongAsync] invalid url: " + url);
             }
         }
     }
