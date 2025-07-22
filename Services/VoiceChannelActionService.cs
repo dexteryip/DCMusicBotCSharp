@@ -154,17 +154,19 @@ namespace DCMusicBot.Services
         public async Task EnqueuSongAsync(Message requestMessage, ulong voiceChannelId, string url)
         {
             logger.LogInformation($"[EnqueuSongAsync] channel:{voiceChannelId} url: {url}");
-            if (!BotInChannel(voiceChannelId))
-            {
-                throw new Exception("Bot not in channel");
-            }
-            if (env.IsDevelopment()) throw new Exception("no play music in dev!");
-
-            VoiceConnection connection = currentConnections[voiceChannelId];
-
-            SongInstruction song = new SongInstruction(requestMessage);
             try
             {
+                if (!BotInChannel(voiceChannelId))
+                {
+                    throw new Exception("Bot not in channel");
+                }
+
+                if (env.IsDevelopment()) throw new Exception("no play music in dev!");
+
+                VoiceConnection connection = currentConnections[voiceChannelId];
+
+                SongInstruction song = new SongInstruction(requestMessage);
+
                 song.LoadSong(url);
                 if (song.IsValidUrl)
                 {
