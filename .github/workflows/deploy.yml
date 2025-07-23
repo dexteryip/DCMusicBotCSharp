@@ -23,7 +23,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          instance-ids: ${{ secrets.AWS_INSTANCE_ID }}
+          instance-ids: i-0f51299cce9e2fc4d
           working-directory: /home/ubuntu
           command: bash deploy.sh
           comment: Deploy via GitHub Actions
