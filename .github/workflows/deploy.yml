@@ -16,16 +16,15 @@ jobs:
     environment: production
 
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Run SSM Command
+        uses: peterkimzz/aws-ssm-send-command@master
+        id: ssm
         with:
+          aws-region: ${{ secrets.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Run SSM command
-        uses: aws-actions/aws-ssm-send-command@v1
-        with:
-          command: /home/ubuntu/deploy.sh
-          ec2-instance-id: ${{ secrets.AWS_INSTANCE_ID }}
-          region: ${{ secrets.AWS_REGION }}
+          instance-ids: ${{ secrets.AWS_INSTANCE_ID }}
+          working-directory: /home/ubuntu
+          command: bash deploy.sh
+          comment: Deploy via GitHub Actions
+          
