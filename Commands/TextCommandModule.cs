@@ -42,5 +42,15 @@ namespace DCMusicBot.Commands
                 await Context.Message.ReplyAsync(result.Message);
             }
         }
+        [Command("skip")]
+        public async void Skip()
+        {
+            var result = await musicService.SkipAsync(Context);
+        }
+        [Command("stop")]
+        public async void Stop()
+        {
+            var result = await musicService.StopAsync(Context);
+        }
     }
 }

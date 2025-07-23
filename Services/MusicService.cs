@@ -1,4 +1,5 @@
 ﻿using DCMusicBot.Module;
+using NetCord.Gateway;
 using NetCord.Gateway.Voice;
 using NetCord.Rest;
 using NetCord.Services.Commands;
@@ -48,7 +49,40 @@ namespace DCMusicBot.Services
                 await voiceChannelActionService.JoinChatAsync(context.Guild!, context.Client, voiceChannelId);
             }
 
-            await voiceChannelActionService.EnqueuSongAsync(context.Message, voiceChannelId, url);
+            await voiceChannelActionService.EnqueuSongAsync(context, voiceChannelId, url);
+
+            return new BotActionResult();
+        }
+
+        public async Task<BotActionResult> SkipAsync(CommandContext context)
+        {
+            // Get the user voice state
+            if (!context.Guild!.VoiceStates.TryGetValue(context.User.Id, out var voiceState))
+            {
+                return new BotActionResult(false, "未入Chat skip mud9");
+            }
+
+            ulong voiceChannelId = voiceState.ChannelId.GetValueOrDefault();
+            if (voiceChannelActionService.BotInChannel(voiceChannelId))
+            {
+                await voiceChannelActionService.SkipAsync(voiceChannelId);
+            }
+
+            return new BotActionResult();
+        }
+        public async Task<BotActionResult> StopAsync(CommandContext context)
+        {
+            // Get the user voice state
+            if (!context.Guild!.VoiceStates.TryGetValue(context.User.Id, out var voiceState))
+            {
+                return new BotActionResult(false, "未入Chat stop mud9");
+            }
+
+            ulong voiceChannelId = voiceState.ChannelId.GetValueOrDefault();
+            if (voiceChannelActionService.BotInChannel(voiceChannelId))
+            {
+                await voiceChannelActionService.StopAsync(voiceChannelId);
+            }
 
             return new BotActionResult();
         }
