@@ -82,10 +82,14 @@ namespace DCMusicBot.Services
                 {
                     if (!songs.TryDequeue(out SongInstruction currentSong)) continue;
 
-                    logger.LogInformation($"[PlayerLoop][{channel}] start playing song {currentSong.YoutubeVideo.Title}");
+                    logger.LogInformation($"[PlayerLoop][{channel}] start playing song [{currentSong.YoutubeVideo.Id}]{currentSong.YoutubeVideo.Title}");
 
                     TimeSpan? duration = currentSong.YoutubeVideo.Duration;
-                    if (duration != null) continue;
+                    if (duration == null)
+                    {
+                        logger.LogInformation($"[PlayerLoop][{channel}] start playing song {currentSong.YoutubeVideo.Title}");
+                        continue;
+                    }
 
                     var task = currentSong.RequestMessage.ReplyAsync($"Playing {currentSong.YoutubeVideo.Title}!");
                     task.Wait();
@@ -93,7 +97,7 @@ namespace DCMusicBot.Services
 
 
 
-                    var audioStreamInfo =await currentSong.GetVideoStreamInfo();
+                    var audioStreamInfo = await currentSong.GetAudioStreamInfo();
                     if (audioStreamInfo == null)
                     {
                         logger.LogInformation($"[PlayerLoop][{channel}] No audio stream found for this video");
@@ -195,7 +199,7 @@ namespace DCMusicBot.Services
                     throw new Exception("Bot not in channel");
                 }
 
-                if (env.IsDevelopment()) throw new Exception("no play music in dev!");
+                //if (env.IsDevelopment()) throw new Exception("no play music in dev!");
 
                 VoiceConnection connection = currentConnections[voiceChannelId];
 
