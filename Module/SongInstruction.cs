@@ -24,14 +24,13 @@ namespace DCMusicBot.Module
                 IsValidUrl = true;
             }
         }
-        public async Task<Stream?> GetVideoStream()
+        public async Task<IVideoStreamInfo?> GetVideoStreamInfo()
         {
             if (!IsValidUrl) return null;
 
             var youtube = new YoutubeClient();
             var streamManifest = await youtube.Videos.Streams.GetManifestAsync(url);
-            var streamInfo = streamManifest.GetMuxedStreams().GetWithHighestVideoQuality();
-            return await youtube.Videos.Streams.GetAsync(streamInfo);
+            return streamManifest.GetMuxedStreams().GetWithHighestVideoQuality();
         }
     }
 

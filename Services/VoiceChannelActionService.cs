@@ -9,16 +9,17 @@ using DCMusicBot.Module;
 using NetCord.Rest;
 using System.Threading;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace DCMusicBot.Services
 {
     // handle concurrent actions
     public class VoiceChannelActionService(IWebHostEnvironment env, ILogger<VoiceChannelActionService> logger)
     {
-        private class VoiceConnection(ulong channel)
+        private class VoiceConnection(ulong channel, ILogger logger)
         {
             public VoiceClient VoiceClient;
-            public Stream audioStream;
+            public Stream OutStream;
             private CancellationTokenSource skipTokenSource = new();
             private SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
             public bool isPlaying = false;
@@ -42,6 +43,7 @@ namespace DCMusicBot.Services
                     if (isPlaying) return;
                     if (songs.Count == 0) return;
                     isPlaying = true;
+                    logger.LogInformation($"[VoiceConnection] start playing song, channel {channel}");
                     player = Task.Run(PlayerLoop);
                 }
                 finally
@@ -80,6 +82,8 @@ namespace DCMusicBot.Services
                 {
                     if (!songs.TryDequeue(out SongInstruction currentSong)) continue;
 
+                    logger.LogInformation($"[PlayerLoop][{channel}] start playing song {currentSong.YoutubeVideo.Title}");
+
                     TimeSpan? duration = currentSong.YoutubeVideo.Duration;
                     if (duration != null) continue;
 
@@ -88,13 +92,43 @@ namespace DCMusicBot.Services
                     var trackingMessage = task.Result;
 
 
-                    // We create this stream to automatically convert the PCM data returned by FFmpeg to Opus data.
-                    // The Opus data is then written to 'outStream' that sends the data to Discord
-                    OpusEncodeStream stream = new(audioStream, PcmFormat.Short, VoiceChannels.Stereo, OpusApplication.Audio);
 
-                    var getStreamTask = currentSong.GetVideoStream();
-                    var videoStream = getStreamTask.Result;
-                    videoStream.CopyTo(stream);
+                    var audioStreamInfo =await currentSong.GetVideoStreamInfo();
+                    if (audioStreamInfo == null)
+                    {
+                        logger.LogInformation($"[PlayerLoop][{channel}] No audio stream found for this video");
+                        break;
+                    }
+
+
+                    // Set up FFmpeg to process the audio stream
+                    var startInfo = new ProcessStartInfo("ffmpeg")
+                    {
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        Arguments = $"-i \"{audioStreamInfo.Url}\" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -loglevel -8 -ac 2 -f s16le -ar 48000 pipe:1"
+                    };
+
+                    try
+                    {
+                        using var ffmpeg = Process.Start(startInfo);
+                        if (ffmpeg == null)
+                        {
+                            logger.LogError($"[PlayerLoop][{channel}] Failed to start FFmpeg");
+                            return;
+                        }
+
+                        // Create an Opus stream to encode audio
+                        using var stream = new OpusEncodeStream(OutStream, PcmFormat.Short, VoiceChannels.Stereo, OpusApplication.Audio);
+
+                        // Copy FFmpeg output to the Opus stream
+                        await ffmpeg.StandardOutput.BaseStream.CopyToAsync(stream);
+                        await stream.FlushAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, $"[PlayerLoop][{channel}] Error: {ex.Message}");
+                    }
 
                     TimeSpan waitTotal = duration ?? TimeSpan.Zero;
                     if (waitTotal != TimeSpan.Zero) waitTotal += new TimeSpan(0, 0, 5);
@@ -127,7 +161,7 @@ namespace DCMusicBot.Services
                 {
                     return;
                 }
-                VoiceConnection connection = currentConnections[voiceChannelId] = new VoiceConnection(voiceChannelId);
+                VoiceConnection connection = currentConnections[voiceChannelId] = new VoiceConnection(voiceChannelId, logger);
 
                 VoiceClient voiceClient = await client.JoinVoiceChannelAsync(
                         guild.Id,
@@ -143,7 +177,7 @@ namespace DCMusicBot.Services
                 await voiceClient.EnterSpeakingStateAsync(new(SpeakingFlags.Microphone));
 
                 connection.VoiceClient = voiceClient;
-                connection.audioStream = voiceClient.CreateOutputStream();
+                connection.OutStream = voiceClient.CreateOutputStream();
             }
             finally
             {
@@ -171,6 +205,7 @@ namespace DCMusicBot.Services
                 if (song.IsValidUrl)
                 {
                     logger.LogInformation($"song id: [{song.YoutubeVideo.Id}], song title: [{song.YoutubeVideo.Title}]");
+                    requestMessage.ReplyAsync($"入咗Playlist {song.YoutubeVideo.Title}!");
                     connection.songs.Enqueue(song);
                     connection.StartPlaying();
                 }
