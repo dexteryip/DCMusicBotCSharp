@@ -2,6 +2,7 @@
 using YoutubeExplode;
 using YoutubeExplode.Videos.Streams;
 using NetCord.Gateway;
+using System.Linq;
 
 namespace DCMusicBot.Module
 {
@@ -30,7 +31,12 @@ namespace DCMusicBot.Module
 
             var youtube = new YoutubeClient();
             var streamManifest = await youtube.Videos.Streams.GetManifestAsync(url);
-            return streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
+            var streams = streamManifest.GetAudioOnlyStreams();
+            var stream = streams.Where(s => s.Bitrate > new Bitrate(50 * 1000)).OrderBy(s => s.Bitrate).First(); // min above 50 kbps
+            if (stream == null)
+                stream = streams.OrderBy(s => s.Bitrate).First();
+            //return streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
+            return stream;
         }
     }
 
