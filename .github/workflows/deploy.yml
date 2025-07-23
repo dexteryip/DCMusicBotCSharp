@@ -25,7 +25,7 @@ jobs:
         HOST: ${{ secrets.EC2_HOST }}
         USER: ${{ secrets.EC2_USER }}
       run: |
-        cd ~/DCMusicBotCSharp
+        cd /home/${{ secrets.EC2_USER }}/DCMusicBotCSharp
         git pull
         cd ..
         docker-compose up -d --build
