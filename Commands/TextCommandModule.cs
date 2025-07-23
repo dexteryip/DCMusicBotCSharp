@@ -1,5 +1,6 @@
 ﻿using DCMusicBot.Module;
 using DCMusicBot.Services;
+using NetCord.Services.ApplicationCommands;
 using NetCord.Services.Commands;
 using System;
 
@@ -13,6 +14,11 @@ namespace DCMusicBot.Commands
             return basicService.Help();
         }
 
+        [Command("hi")]
+        public string Ping()
+        {
+            return basicService.Hi();
+        }
 
         // debug
         [Command("join")]
