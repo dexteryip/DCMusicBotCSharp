@@ -4,6 +4,7 @@ name: Deploy to Amazon ECS
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,16 +16,51 @@ jobs:
     environment: production
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Deploy to EC2
-      env:
-        PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
-        HOST: ${{ secrets.EC2_HOST }}
-        USER: ${{ secrets.EC2_USER }}
-      run: |
-        cd DCMusicBotCSharp
-        git pull
-        cd ..
-        docker-compose up -d --build
+      - name: Check SSM Instance Status
+        run: |
+          aws ssm describe-instance-information \
+            --region ${{ secrets.AWS_REGION }} \
+            --instance-id i-0f51299cce9e2fc4d \
+            --query 'InstanceInformationList[*].InstanceId' \
+            --output text || { echo "Instance not registered with SSM"; exit 1; }
+
+      - name: Run SSM Command
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --instance-ids "i-0f51299cce9e2fc4d" \
+            --parameters '{"commands":["bash /home/ubuntu/my-app/deploy.sh"]}' \
+            --region ${{ secrets.AWS_REGION }} \
+            --query "Command.CommandId" \
+            --output text)
+          
+          STATUS="Pending"
+          while [ "$STATUS" == "Pending" ] || [ "$STATUS" == "InProgress" ]; do
+            sleep 5
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "i-0f51299cce9e2fc4d" \
+              --region ${{ secrets.AWS_REGION }} \
+              --query "Status" \
+              --output text)
+            echo "Command status: $STATUS"
+          done
+          
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "i-0f51299cce9e2fc4d" \
+            --region ${{ secrets.AWS_REGION }} \
+            --query "StandardOutputContent" \
+            --output text
+          
+          if [ "$STATUS" != "Success" ]; then
+            echo "Command failed with status: $STATUS"
+            exit 1
+          fi
