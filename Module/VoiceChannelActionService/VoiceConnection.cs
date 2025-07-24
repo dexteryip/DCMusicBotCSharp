@@ -3,6 +3,8 @@ using NetCord.Gateway;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using DCMusicBot.Module;
+using NetCord.Logging;
+using System;
 
 namespace DCMusicBot.Services
 {
@@ -22,7 +24,10 @@ namespace DCMusicBot.Services
                 if (!args.Reconnect)
                 {
                     Task.Run(StopAsync);
-                    currentConnections.Remove(channel, out var con);
+                    if (currentConnections.ContainsKey(channel))
+                    {
+                        currentConnections.Remove(channel, out var con);
+                    }
                 }
                 return default;
             }
@@ -149,6 +154,8 @@ namespace DCMusicBot.Services
                         ffmpeg.Kill();
 
                         await currentSong.RequestContext.Channel.DeleteMessageAsync(playingText.Id);
+
+                        await currentSong.RequestContext.Client.UpdateVoiceStateAsync(new VoiceStateProperties(currentSong.RequestContext.Guild.Id, channel));
                     }
                     catch (Exception ex)
                     {
@@ -160,6 +167,7 @@ namespace DCMusicBot.Services
                     }
                 }
                 isPlaying = false;
+
             }
         }
     }
